@@ -5,6 +5,8 @@ const traverse = require('traverse');
 const urlJoin = require('url-join');
 const _ = require('lodash');
 
+const operationTypes = ['get', 'put', 'post', 'delete', 'options', 'head', 'patch'];
+
 class SwaggerCombine {
   constructor(config, opts) {
     this.config = _.cloneDeep(config);
@@ -152,7 +154,7 @@ class SwaggerCombine {
         _.forIn(this.apis[idx].tags.rename, (newTagName, tagNameToRename) => {
           traverse(schema).forEach(function traverseSchema() {
             if (this.key === 'tags' && Array.isArray(this.node) && this.node.includes(tagNameToRename)) {
-              this.update(this.node.map(tag => (tag === tagNameToRename ? newTagName : tag)));
+              this.update(_.uniq(this.node.map(tag => (tag === tagNameToRename ? newTagName : tag))));
             }
           });
         });
@@ -169,9 +171,9 @@ class SwaggerCombine {
       if (this.apis[idx].tags && this.apis[idx].tags.add && this.apis[idx].tags.add.length > 0) {
         this.apis[idx].tags.add.forEach(newTagName => {
           traverse(schema).forEach(function traverseSchema() {
-            if (this.parent && this.parent.parent && this.parent.parent.key === 'paths') {
+            if (this.parent && this.parent.parent && this.parent.parent.key === 'paths' && operationTypes.includes(this.key)) {
               const newTags = (this.node.tags && Array.isArray(this.node.tags))
-                ? this.node.tags.concat(newTagName)
+                ? _.uniq(this.node.tags.concat(newTagName))
                 : [newTagName];
 
               this.update(Object.assign({}, this.node, { tags: newTags }));
